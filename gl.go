@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/aykay76/timeline/dto"
 	"github.com/go-gl/gl/v4.1-core/gl"
 	"github.com/go-gl/glfw/v3.2/glfw"
 )
@@ -40,7 +41,7 @@ func initGlfw() *glfw.Window {
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
 	glfw.WindowHint(glfw.OpenGLForwardCompatible, glfw.True)
 
-	window, err := glfw.CreateWindow(width, height, "Conway's Game of Life", nil, nil)
+	window, err := glfw.CreateWindow(width, height, "Go-OpenGL", nil, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -98,8 +99,38 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 	return shader, nil
 }
 
-// makeVao initializes and returns a vertex array from the points provided.
-func makeVao(points []float32) uint32 {
+func makeWaypointPathVao(path dto.WaypointPath) uint32 {
+	minlat := float32(999.0)
+	minlng := float32(999.0)
+	maxlat := float32(-999.0)
+	maxlng := float32(-999.0)
+	points := make([]float32, 2*len(path.Waypoints))
+	for idx, point := range path.Waypoints {
+		points[idx*2] = float32(point.LngE7) / 1e7
+		points[idx*2+1] = float32(point.LatE7) / 1e7
+		if points[idx*2] < minlng {
+			minlng = points[idx*2]
+		}
+		if points[idx*2] > maxlng {
+			maxlng = points[idx*2]
+		}
+		if points[idx*2+1] < minlat {
+			minlat = points[idx*2+1]
+		}
+		if points[idx*2+1] > maxlat {
+			maxlat = points[idx*2+1]
+		}
+	}
+	fmt.Println(points)
+	for i, p := range points {
+		if i%2 == 0 {
+			points[i] = (p - minlng) / (maxlng - minlng)
+		} else {
+			points[i] = (p - minlat) / (maxlat - minlat)
+		}
+	}
+	fmt.Println(points)
+
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
@@ -110,7 +141,7 @@ func makeVao(points []float32) uint32 {
 	gl.BindVertexArray(vao)
 	gl.EnableVertexAttribArray(0)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.VertexAttribPointer(0, 3, gl.FLOAT, false, 0, nil)
+	gl.VertexAttribPointer(0, 2, gl.FLOAT, false, 0, nil)
 
 	return vao
 }

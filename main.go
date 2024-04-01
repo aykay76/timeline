@@ -19,34 +19,35 @@ const (
 )
 
 var (
-	columns   = 60
-	rows      = 60
-	seed      = time.Now().UnixNano()
-	threshold = 0.2
-	fps       = 20
+	fps = 20
 )
 
-var month dto.Month
+var month *dto.Month
+var waypointVao uint32
 
 func init() {
-	flag.IntVar(&columns, "columns", columns, "Sets the number of columns.")
-	flag.IntVar(&rows, "rows", rows, "Sets the number of columns.")
-	flag.Int64Var(&seed, "seed", seed, "Sets the starting seed of the game, used to randomize the initial state.")
-	flag.Float64Var(&threshold, "threshold", threshold, "A percentage between 0 and 1 used in conjunction with the -seed to determine if a cell starts alive. For example, 0.15 means each cell has a 15% chance of starting alive.")
 	flag.IntVar(&fps, "fps", fps, "Sets the frames-per-second, used set the speed of the simulation.")
 	flag.Parse()
 
-	fileBytes, err := os.ReadFile("2023_APRIL.json")
+	month = loadMonth("2023_APRIL.json")
+}
+
+func loadMonth(path string) *dto.Month {
+	var month dto.Month
+
+	fileBytes, err := os.ReadFile(path)
 	if err == nil {
 		err = json.Unmarshal(fileBytes, &month)
-		if err == nil {
-			fmt.Println(month.TimelineObjects)
-		} else {
+		if err != nil {
 			fmt.Println(err)
+			return nil
 		}
 	} else {
 		fmt.Println(err)
+		return nil
 	}
+
+	return &month
 }
 
 func main() {
@@ -56,19 +57,14 @@ func main() {
 	defer glfw.Terminate()
 	prog := initOpenGL()
 
-	for _, timelineObject := range month.TimelineObjects {
-		for _, point := range timelineObject.ActivitySegment.WaypointPath.Waypoints {
-			fmt.Println(point.LatE7, point.LngE7)
-		}
-	}
+	waypointVao = makeWaypointPathVao(month.TimelineObjects[0].ActivitySegment.WaypointPath)
 
 	// Make the cells and start the loop
-	cells := makeCells(seed, threshold)
 	t := time.Now()
 	for !window.ShouldClose() {
-		tick(cells)
+		tick()
 
-		if err := draw(prog, window, cells); err != nil {
+		if err := draw(prog, window); err != nil {
 			panic(err)
 		}
 
@@ -77,25 +73,15 @@ func main() {
 	}
 }
 
-// tick updates the state of each cell in the game board.
-func tick(cells [][]*cell) {
-	for x := range cells {
-		for _, c := range cells[x] {
-			c.checkState(cells)
-		}
-	}
+func tick() {
 }
 
-// draw redraws the game board and the cells within.
-func draw(prog uint32, window *glfw.Window, cells [][]*cell) error {
+func draw(prog uint32, window *glfw.Window) error {
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 	gl.UseProgram(prog)
 
-	for x := range cells {
-		for _, c := range cells[x] {
-			c.draw()
-		}
-	}
+	gl.BindVertexArray(waypointVao)
+	gl.DrawArrays(gl.LINE_STRIP, 0, int32(len(month.TimelineObjects[0].ActivitySegment.WaypointPath.Waypoints)))
 
 	glfw.PollEvents()
 	window.SwapBuffers()
