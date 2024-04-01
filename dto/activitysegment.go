@@ -1,6 +1,7 @@
 package dto
 
 type ActivitySegment struct {
+	Vao               uint32            `json:"-"`
 	StartLocation     Location          `json:"startLocation"`
 	EndLocation       Location          `json:"endLocation"`
 	Duration          Duration          `json:"duration"`

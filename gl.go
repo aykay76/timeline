@@ -99,37 +99,53 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 	return shader, nil
 }
 
-func makeWaypointPathVao(path dto.WaypointPath) uint32 {
-	minlat := float32(999.0)
-	minlng := float32(999.0)
-	maxlat := float32(-999.0)
-	maxlng := float32(-999.0)
-	points := make([]float32, 2*len(path.Waypoints))
-	for idx, point := range path.Waypoints {
-		points[idx*2] = float32(point.LngE7) / 1e7
-		points[idx*2+1] = float32(point.LatE7) / 1e7
-		if points[idx*2] < minlng {
-			minlng = points[idx*2]
+func makeWaypointPathVao(path *dto.ActivitySegment) error {
+	pidx := 0
+	points := make([]float32, 2*len(path.WaypointPath.Waypoints)+4)
+	points[pidx] = float32(path.StartLocation.LongitudeE7) / 1e7
+	pidx++
+	points[pidx] = float32(path.StartLocation.LatitudeE7) / 1e7
+	pidx++
+	for _, point := range path.WaypointPath.Waypoints {
+		points[pidx] = float32(point.LngE7) / 1e7
+		if points[pidx] < minlng {
+			minlng = points[pidx]
 		}
-		if points[idx*2] > maxlng {
-			maxlng = points[idx*2]
+		if points[pidx] > maxlng {
+			maxlng = points[pidx]
 		}
-		if points[idx*2+1] < minlat {
-			minlat = points[idx*2+1]
+		pidx++
+		points[pidx] = float32(point.LatE7) / 1e7
+		if points[pidx] < minlat {
+			minlat = points[pidx]
 		}
-		if points[idx*2+1] > maxlat {
-			maxlat = points[idx*2+1]
+		if points[pidx] > maxlat {
+			maxlat = points[pidx]
 		}
+		pidx++
 	}
-	fmt.Println(points)
+	points[pidx] = float32(path.EndLocation.LongitudeE7) / 1e7
+	pidx++
+	points[pidx] = float32(path.EndLocation.LatitudeE7) / 1e7
+	pidx++
+	// fmt.Println(points)
+	largest := maxlng - minlng
+	if maxlat-minlat > largest {
+		largest = maxlat - minlat
+	}
+	// fmt.Println(largest)
 	for i, p := range points {
+		// if i%2 == 0 {
+		// 	points[i] = 1.0 - (p-minlng)/(largest)*2.0
+		// } else {
+		// 	points[i] = 1.0 - (p-minlat)/(largest)*2.0
+		// }
 		if i%2 == 0 {
-			points[i] = (p - minlng) / (maxlng - minlng)
+			points[i] = ((p - minlng) / largest)
 		} else {
-			points[i] = (p - minlat) / (maxlat - minlat)
+			points[i] = ((p - minlat) / largest)
 		}
 	}
-	fmt.Println(points)
 
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
@@ -142,6 +158,7 @@ func makeWaypointPathVao(path dto.WaypointPath) uint32 {
 	gl.EnableVertexAttribArray(0)
 	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
 	gl.VertexAttribPointer(0, 2, gl.FLOAT, false, 0, nil)
+	path.Vao = vao
 
-	return vao
+	return nil
 }
