@@ -100,6 +100,18 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 }
 
 func makeWaypointPathVao(path *dto.ActivitySegment) error {
+	if path.StartLocation.LongitudeE7 < 123000000 || path.StartLocation.LongitudeE7 > 127000000 {
+		return fmt.Errorf("start location is west of 1 degree")
+	}
+	if path.EndLocation.LongitudeE7 < 123000000 || path.EndLocation.LongitudeE7 > 127000000 {
+		return fmt.Errorf("end location is west of 1 degree")
+	}
+	for _, point := range path.WaypointPath.Waypoints {
+		if point.LngE7 < 123000000 || point.LngE7 > 127000000 {
+			return fmt.Errorf("waypoint is west of 1 degree")
+		}
+	}
+
 	pidx := 0
 	points := make([]float32, 2*len(path.WaypointPath.Waypoints)+4)
 	points[pidx] = float32(path.StartLocation.LongitudeE7) / 1e7
@@ -108,20 +120,8 @@ func makeWaypointPathVao(path *dto.ActivitySegment) error {
 	pidx++
 	for _, point := range path.WaypointPath.Waypoints {
 		points[pidx] = float32(point.LngE7) / 1e7
-		if points[pidx] < minlng {
-			minlng = points[pidx]
-		}
-		if points[pidx] > maxlng {
-			maxlng = points[pidx]
-		}
 		pidx++
 		points[pidx] = float32(point.LatE7) / 1e7
-		if points[pidx] < minlat {
-			minlat = points[pidx]
-		}
-		if points[pidx] > maxlat {
-			maxlat = points[pidx]
-		}
 		pidx++
 	}
 	points[pidx] = float32(path.EndLocation.LongitudeE7) / 1e7
@@ -129,23 +129,19 @@ func makeWaypointPathVao(path *dto.ActivitySegment) error {
 	points[pidx] = float32(path.EndLocation.LatitudeE7) / 1e7
 	pidx++
 	// fmt.Println(points)
-	largest := maxlng - minlng
-	if maxlat-minlat > largest {
-		largest = maxlat - minlat
-	}
+	// largest := maxlat - minlat
+	// if maxlat-minlat > largest {
+	// 	largest = maxlat - minlat
+	// }
 	// fmt.Println(largest)
 	for i, p := range points {
-		// if i%2 == 0 {
-		// 	points[i] = 1.0 - (p-minlng)/(largest)*2.0
-		// } else {
-		// 	points[i] = 1.0 - (p-minlat)/(largest)*2.0
-		// }
 		if i%2 == 0 {
-			points[i] = ((p - minlng) / largest)
+			points[i] = ((p - minlng) / scaleX) - shiftX
 		} else {
-			points[i] = ((p - minlat) / largest)
+			points[i] = ((p - minlat) / scaleY) - shiftY
 		}
 	}
+	// fmt.Println(points)
 
 	var vbo uint32
 	gl.GenBuffers(1, &vbo)
