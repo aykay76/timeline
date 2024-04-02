@@ -100,15 +100,18 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 }
 
 func makeWaypointPathVao(path *dto.ActivitySegment) error {
+	if len(path.WaypointPath.Waypoints) < 3 {
+		return fmt.Errorf("not enough waypoints")
+	}
 	if path.StartLocation.LongitudeE7 < 123000000 || path.StartLocation.LongitudeE7 > 127000000 {
-		return fmt.Errorf("start location is west of 1 degree")
+		return fmt.Errorf("start location is west of Copenhagen")
 	}
 	if path.EndLocation.LongitudeE7 < 123000000 || path.EndLocation.LongitudeE7 > 127000000 {
-		return fmt.Errorf("end location is west of 1 degree")
+		return fmt.Errorf("end location is west of Copenhagen")
 	}
 	for _, point := range path.WaypointPath.Waypoints {
 		if point.LngE7 < 123000000 || point.LngE7 > 127000000 {
-			return fmt.Errorf("waypoint is west of 1 degree")
+			return fmt.Errorf("waypoint is west of Copenhagen")
 		}
 	}
 
