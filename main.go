@@ -23,7 +23,8 @@ const (
 )
 
 var (
-	fps = 20
+	fps         = 20
+	totalWalked = 0
 )
 
 var month *dto.Month
@@ -46,14 +47,12 @@ func init() {
 			o := &month.TimelineObjects[i]
 
 			if o.PlaceVisit.CentreLatE7 == 0 {
-				// y, m, _ := o.ActivitySegment.Duration.StartTimestamp.Date()
-
-				// if y == 2023 && m == 12 {
-				// fmt.Println(o.ActivitySegment.Duration.StartTimestamp)
 				if o.ActivitySegment.StartLocation.LongitudeE7 > 1e7 && o.ActivitySegment.EndLocation.LongitudeE7 > 1e7 {
 					activitySegments = append(activitySegments, o.ActivitySegment)
+					if o.ActivitySegment.WaypointPath.TravelMode == "WALK" {
+						totalWalked += int(o.ActivitySegment.WaypointPath.DistanceMetres)
+					}
 				}
-				// }
 			} else {
 				placeVisits = append(placeVisits, o.PlaceVisit)
 				for i := 0; i < len(o.PlaceVisit.ChildVisits); i++ {
@@ -64,6 +63,7 @@ func init() {
 	}
 
 	fmt.Println(len(activitySegments), " activity segments; ", len(placeVisits), " place visits.")
+	fmt.Println("Total walked (m): ", totalWalked)
 }
 
 func loadMonth(path string) *dto.Month {
@@ -158,10 +158,10 @@ func main() {
 
 	for i := 0; i < len(activitySegments); i++ {
 		activitySegment := &activitySegments[i]
-		err := makeWaypointPathVao(activitySegment)
-		if err != nil {
-			fmt.Println(err)
-		}
+		makeWaypointPathVao(activitySegment)
+		// if err != nil {
+		// fmt.Println(err)
+		// }
 	}
 
 	points := make([]float32, 2*len(placeVisits))
