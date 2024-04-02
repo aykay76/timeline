@@ -16,17 +16,29 @@ import (
 const (
 	width  = 800.0
 	height = 800.0
-	scaleX = 0.028
-	scaleY = 0.018
-	shiftX = 2.3
-	shiftY = 3.75
+
+	// Surrey
+	// scaleX    = 0.05
+	// scaleY    = 0.05
+	// shiftX    = 0.7
+	// shiftY    = 0.7
+	// clipLeft  = -50000000
+	// clipRight = 19000000
+
+	// Copenhagen
+	scaleX    = 0.028
+	scaleY    = 0.018
+	shiftX    = 2.3
+	shiftY    = 3.75
+	clipLeft  = 123000000
+	clipRight = 129000000
 )
 
 var (
 	fps          = 20
 	totalWalked  = 0
-	drawPoints   = false
-	drawActivity = false
+	drawPoints   = true
+	drawActivity = true
 	drawRecords  = true
 )
 
@@ -36,6 +48,10 @@ var minlat float32
 var minlng float32
 var maxlat float32
 var maxlng float32
+var minlatE7 int
+var minlngE7 int
+var maxlatE7 int
+var maxlngE7 int
 var activitySegments []dto.ActivitySegment
 var placeVisits []dto.PlaceVisit
 var placeVisitsVao uint32
@@ -45,8 +61,10 @@ func init() {
 	flag.IntVar(&fps, "fps", fps, "Sets the frames-per-second, used set the speed of the simulation.")
 	flag.Parse()
 
-	records = loadRecords("Records.json")
-	fmt.Println(len(records.Locations))
+	if drawRecords {
+		records = loadRecords("Records.json")
+		fmt.Println(len(records.Locations))
+	}
 
 	files := []string{
 		"2024_MARCH.json", "2024_FEBRUARY.json", "2024_JANUARY.json",
@@ -56,6 +74,7 @@ func init() {
 		"2020_DECEMBER.json", "2020_NOVEMBER.json", "2020_OCTOBER.json", "2020_SEPTEMBER.json", "2020_AUGUST.json", "2020_JULY.json", "2020_JUNE.json", "2020_MAY.json", "2020_APRIL.json", "2020_MARCH.json", "2020_FEBRUARY.json", "2020_JANUARY.json",
 		"2019_DECEMBER.json", "2019_NOVEMBER.json", "2019_OCTOBER.json", "2019_SEPTEMBER.json", "2019_AUGUST.json", "2019_JULY.json", "2019_JUNE.json", "2019_MAY.json", "2019_APRIL.json", "2019_MARCH.json", "2019_FEBRUARY.json", "2019_JANUARY.json",
 		"2018_DECEMBER.json", "2018_NOVEMBER.json", "2018_OCTOBER.json", "2018_AUGUST.json", "2018_JULY.json",
+		"2017_OCTOBER.json", "2017_SEPTEMBER.json", "2017_AUGUST.json", "2017_JULY.json",
 	}
 	for _, file := range files {
 		month = loadMonth(file)
@@ -63,7 +82,7 @@ func init() {
 			o := &month.TimelineObjects[i]
 
 			if o.PlaceVisit.CentreLatE7 == 0 {
-				if o.ActivitySegment.StartLocation.LongitudeE7 > 1e7 && o.ActivitySegment.EndLocation.LongitudeE7 > 1e7 {
+				if o.ActivitySegment.StartLocation.LongitudeE7 > clipLeft && o.ActivitySegment.EndLocation.LongitudeE7 > clipLeft {
 					activitySegments = append(activitySegments, o.ActivitySegment)
 					if o.ActivitySegment.WaypointPath.TravelMode == "WALK" {
 						totalWalked += int(o.ActivitySegment.WaypointPath.DistanceMetres)
@@ -135,7 +154,7 @@ func main() {
 
 	for i := 0; i < len(activitySegments); i++ {
 		activitySegment := &activitySegments[i]
-		if activitySegment.StartLocation.LongitudeE7 > 123000000 && activitySegment.StartLocation.LongitudeE7 < 127000000 {
+		if activitySegment.StartLocation.LongitudeE7 > clipLeft && activitySegment.StartLocation.LongitudeE7 < clipRight {
 			lat = float32(activitySegment.StartLocation.LatitudeE7) / 1e7
 			lng = float32(activitySegment.StartLocation.LongitudeE7) / 1e7
 			if lng < minlng {
@@ -153,7 +172,7 @@ func main() {
 		}
 
 		for _, p := range activitySegment.WaypointPath.Waypoints {
-			if p.LngE7 > 123000000 && p.LngE7 < 127000000 {
+			if p.LngE7 > clipLeft && p.LngE7 < clipRight {
 				lat := float32(p.LatE7) / 1e7
 				lng := float32(p.LngE7) / 1e7
 
@@ -172,9 +191,9 @@ func main() {
 			}
 		}
 
-		if activitySegment.EndLocation.LongitudeE7 > 123000000 && activitySegment.EndLocation.LongitudeE7 < 127000000 {
-			lat = float32(activitySegment.EndLocation.LatitudeE7) / 1e7
-			lng = float32(activitySegment.EndLocation.LongitudeE7) / 1e7
+		if activitySegment.EndLocation.LongitudeE7 > clipLeft && activitySegment.EndLocation.LongitudeE7 < clipRight {
+			lat = float32(activitySegment.EndLocation.LatitudeE7) - minlng/1e7
+			lng = float32(activitySegment.EndLocation.LongitudeE7) - minlng/1e7
 			if lng < minlng {
 				minlng = lng
 			}
@@ -189,6 +208,11 @@ func main() {
 			}
 		}
 	}
+
+	minlatE7 = int(minlat * 1e7)
+	minlngE7 = int(minlng * 1e7)
+	maxlatE7 = int(maxlat * 1e7)
+	maxlngE7 = int(maxlng * 1e7)
 
 	for i := 0; i < len(activitySegments); i++ {
 		activitySegment := &activitySegments[i]
@@ -227,32 +251,34 @@ func main() {
 	gl.VertexAttribPointer(0, 2, gl.FLOAT, false, 0, nil)
 	placeVisitsVao = vao
 
-	points = make([]float32, 2*len(records.Locations))
-	pidx = 0
-	for i := 0; i < len(records.Locations); i++ {
-		points[pidx] = float32(records.Locations[i].LongitudeE7) / 1e7
-		pidx++
-		points[pidx] = float32(records.Locations[i].LatitudeE7) / 1e7
-		pidx++
-	}
-	for i, p := range points {
-		if i%2 == 0 {
-			points[i] = ((p - minlng) / scaleX) - shiftX
-		} else {
-			points[i] = ((p - minlat) / scaleY) - shiftY
+	if drawRecords {
+		points = make([]float32, 2*len(records.Locations))
+		pidx = 0
+		for i := 0; i < len(records.Locations); i++ {
+			points[pidx] = float32(records.Locations[i].LongitudeE7-minlngE7) / 1e7
+			pidx++
+			points[pidx] = float32(records.Locations[i].LatitudeE7-minlatE7) / 1e7
+			pidx++
 		}
+		for i, p := range points {
+			if i%2 == 0 {
+				points[i] = (p / scaleX) - shiftX
+			} else {
+				points[i] = (p / scaleY) - shiftY
+			}
+		}
+
+		gl.GenBuffers(1, &vbo)
+		gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+		gl.BufferData(gl.ARRAY_BUFFER, 4*len(points), gl.Ptr(points), gl.STATIC_DRAW)
+
+		gl.GenVertexArrays(1, &vao)
+		gl.BindVertexArray(vao)
+		gl.EnableVertexAttribArray(0)
+		gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
+		gl.VertexAttribPointer(0, 2, gl.FLOAT, false, 0, nil)
+		recordsVao = vao
 	}
-
-	gl.GenBuffers(1, &vbo)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.BufferData(gl.ARRAY_BUFFER, 4*len(points), gl.Ptr(points), gl.STATIC_DRAW)
-
-	gl.GenVertexArrays(1, &vao)
-	gl.BindVertexArray(vao)
-	gl.EnableVertexAttribArray(0)
-	gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	gl.VertexAttribPointer(0, 2, gl.FLOAT, false, 0, nil)
-	recordsVao = vao
 
 	fmt.Println(minlat, minlng, maxlat, maxlng)
 
