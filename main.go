@@ -38,7 +38,7 @@ var (
 	fps          = 20
 	totalWalked  = 0
 	drawPoints   = true
-	drawActivity = true
+	drawActivity = false
 	drawRecords  = true
 )
 
@@ -320,13 +320,13 @@ func draw(prog uint32, window *glfw.Window) error {
 	}
 
 	if drawPoints {
-		gl.PointSize(5.0)
+		gl.PointSize(3.0)
 		gl.BindVertexArray(placeVisitsVao)
 		gl.DrawArrays(gl.POINTS, 0, int32(len(placeVisits)))
 	}
 
 	if drawRecords {
-		gl.PointSize(5.0)
+		gl.PointSize(3.0)
 		gl.BindVertexArray(recordsVao)
 		gl.DrawArrays(gl.POINTS, 0, int32(len(records.Locations)))
 	}

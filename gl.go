@@ -25,7 +25,7 @@ const (
 
 		out vec4 frag_colour;
 		void main() {
-  			frag_colour = vec4(1, 1, 0.9, 0.5);
+  			frag_colour = vec4(1, 1, 0.8, 0.5);
 		}
 	` + "\x00"
 )
@@ -35,7 +35,7 @@ func initGlfw() *glfw.Window {
 	if err := glfw.Init(); err != nil {
 		panic(err)
 	}
-	glfw.WindowHint(glfw.Resizable, glfw.False)
+	glfw.WindowHint(glfw.Resizable, glfw.True)
 	glfw.WindowHint(glfw.ContextVersionMajor, 4)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 	glfw.WindowHint(glfw.OpenGLProfile, glfw.OpenGLCoreProfile)
@@ -46,7 +46,6 @@ func initGlfw() *glfw.Window {
 		panic(err)
 	}
 	window.MakeContextCurrent()
-
 	return window
 }
 
