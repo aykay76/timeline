@@ -25,7 +25,7 @@ const (
 
 		out vec4 frag_colour;
 		void main() {
-  			frag_colour = vec4(1, 1, 1, 1.0);
+  			frag_colour = vec4(1, 1, 0.9, 0.5);
 		}
 	` + "\x00"
 )
@@ -100,7 +100,7 @@ func compileShader(source string, shaderType uint32) (uint32, error) {
 }
 
 func makeWaypointPathVao(path *dto.ActivitySegment) error {
-	if len(path.WaypointPath.Waypoints) < 3 {
+	if len(path.WaypointPath.Waypoints) < 2 {
 		return fmt.Errorf("not enough waypoints")
 	}
 	if path.StartLocation.LongitudeE7 < 123000000 || path.StartLocation.LongitudeE7 > 127000000 {
