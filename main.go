@@ -9,27 +9,29 @@ import (
 	"time"
 
 	"github.com/aykay76/timeline/dto"
-	"github.com/go-gl/gl/v4.1-core/gl"
-	"github.com/go-gl/glfw/v3.2/glfw"
+	"github.com/go-gl/gl/v4.6-core/gl"
+	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
 const (
 	width  = 800.0
 	height = 800.0
 
+	// TODO: make these configurable profiles
+
 	// Surrey
-	// scaleX    = 0.05
-	// scaleY    = 0.05
+	// scaleX    = 5
+	// scaleY    = 5
 	// shiftX    = 0.7
 	// shiftY    = 0.7
 	// clipLeft  = -50000000
 	// clipRight = 19000000
 
 	// Copenhagen
-	scaleX    = 0.028
-	scaleY    = 0.018
-	shiftX    = 2.3
-	shiftY    = 3.75
+	scaleX    = 0.024
+	scaleY    = 0.014
+	shiftX    = 2.6
+	shiftY    = 4.8
 	clipLeft  = 123000000
 	clipRight = 129000000
 )
